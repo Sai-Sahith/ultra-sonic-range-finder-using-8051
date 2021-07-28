@@ -1,0 +1,4 @@
+".\Objects\STARTUP.obj",
+".\Objects\usrange.obj" 
+TO ".\Objects\sahith2" 
+PRINT(".\Listings\sahith2.m51")

@@ -1,0 +1,143 @@
+C51 COMPILER V9.60.0.0   USRANGE                                                           06/26/2021 17:04:40 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE USRANGE
+OBJECT MODULE PLACED IN .\Objects\usrange.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE usrange.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\u
+                    -srange.lst) TABS(2) OBJECT(.\Objects\usrange.obj)
+
+line level    source
+
+   1          #include <reg51.h>   //Header file inclusion for 8051
+   2          #include <intrins.h> // for using _nop_() function
+   3          
+   4          void delay(unsigned int rtime);
+   5          void command(unsigned char DATA);
+   6          void display_lcd(unsigned char location, unsigned char *d);
+   7          void get_range(void);
+   8          
+   9          sbit trig = P3 ^ 5; //timer 1
+  10          sbit echo = P3 ^ 2; //INTR 0
+  11          sbit LCDrs = P2 ^ 0; //The Register select Pin
+  12          sbit LCDrw = P2 ^ 1; //The Read/Write Pin
+  13          sbit LCDen = P2 ^ 2; //The Enable Pin
+  14          
+  15          void main(void)
+  16          {
+  17   1          //initilaze LCD
+  18   1          command(0x30); //1 line and 5x7 matrix
+  19   1          delay(1);
+  20   1      
+  21   1          command(0x38); //2 line and 5x7 matrix
+  22   1          delay(1);
+  23   1      
+  24   1          command(0x0c); //Display on, cursor off
+  25   1          delay(1);
+  26   1      
+  27   1          command(0x01); //Clear display Screen
+  28   1          delay(1);
+  29   1      
+  30   1          command(0x06); //shift cursor to right
+  31   1          delay(1);
+  32   1          
+  33   1          display_lcd(0x80, "OBSTACLE  AT "); //Display character String from location specified
+  34   1          TMOD = 0x09;                        //timer0 in 16 bit mode with gate enable
+  35   1          TR0 = 1;                            //timer run enabled
+  36   1          TH0 = 0x00;
+  37   1          TL0 = 0x00;
+  38   1          echo = 1; //setting pin P3.2 as input
+  39   1          
+  40   1          while (1){
+  41   2              get_range();
+  42   2              delay(2);
+  43   2          }
+  44   1      }
+  45          
+  46          void delay(unsigned int rtime)
+  47          {
+  48   1          unsigned int r, s;
+  49   1          for (r = 0; r < rtime; r++)
+  50   1              for (s = 0; s < 1275; s++);
+  51   1      }
+  52          
+  53          void command(unsigned char DATA)
+  54          {
+C51 COMPILER V9.60.0.0   USRANGE                                                           06/26/2021 17:04:40 PAGE 2   
+
+  55   1          LCDrs = 1;
+  56   1          LCDrw = 1;
+  57   1          LCDen = 1; //Strobe the enable pin
+  58   1          P1 = DATA; //Put the value on the pins
+  59   1          LCDrs = 0;
+  60   1          LCDrw = 0;
+  61   1          LCDen = 0;
+  62   1      }
+  63          
+  64          void display_lcd(unsigned char location, unsigned char *d)
+  65          {
+  66   1          command(0x00 | location);
+  67   1          delay(1); //10mS delay generation
+  68   1          while (*d)
+  69   1          {
+  70   2              LCDrs = 1;
+  71   2              LCDrw = 1;
+  72   2              LCDen = 1; //Strobe the enable pin
+  73   2              P1 = *d;   //Put the value on the pins
+  74   2              LCDrs = 1;
+  75   2              LCDrw = 0;
+  76   2              LCDen = 0;
+  77   2              delay(1); //10mS delay generation
+  78   2          }
+  79   1      }
+  80          
+  81          void get_range(void)
+  82          {
+  83   1          int range = 0;
+  84   1          int timerval;
+  85   1          int i = 3;
+  86   1          char str[7] = "0000 CM";
+  87   1          // send_pulse
+  88   1          TH0 = 0x00;
+  89   1          TL0 = 0x00;
+  90   1          trig = 1; //pull trigger pin HIGH
+  91   1          //each _nop_() generates 1u sec of delay
+  92   1          _nop_(); _nop_();_nop_();_nop_();_nop_();
+  93   1          _nop_();_nop_();_nop_();_nop_();_nop_();
+  94   1          trig = 0;
+  95   1      
+  96   1          while (INT0 == 0); //waiting until echo pulse is detected
+  97   1          while (INT0 == 1); //waiting until echo change its state
+  98   1          timerval = TH0;
+  99   1          timerval = (timerval << 8) | TL0; //read timer register for timer count
+ 100   1          TH0 = 0xFF;
+ 101   1          TL0 = 0xFF;
+ 102   1          if (timerval < 34300) //Maximum 34300us work at higher levels
+ 103   1              range = timerval / 54;
+ 104   1          else
+ 105   1              range = 0;
+ 106   1          
+ 107   1          // Converting number to 4 digit
+ 108   1          while (range)
+ 109   1          {
+ 110   2              str[i] = 0x30 | range % 10;
+ 111   2              range = range / 10;
+ 112   2              i--;
+ 113   2          }
+ 114   1          display_lcd(0xC5, str);
+ 115   1      }
+
+C51 COMPILER V9.60.0.0   USRANGE                                                           06/26/2021 17:04:40 PAGE 3   
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    351    ----
+   CONSTANT SIZE    =     21    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      14
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
